@@ -25,15 +25,7 @@ def pick_q(board):
             if board[c][r] != -1:
                 return c, r
 
-def sim():
-    p1 = Player(0.7, 0.9, 1, bet_function, bet_function, pick_q)
-    p2 = Player(0.7, 0.9, 1, bet_function, bet_function, pick_q)
-    p3 = Player(0.7, 0.9, 1, bet_function, bet_function, pick_q)
-
-    players = [p1, p2, p3]
-    in_control = 0
-
-    board = gen_board(False)
+def do_round(board, in_control, players):
     while not round_over(board):
         c, r = players[in_control].pick_question_strat(board)
         participants = []
@@ -47,17 +39,33 @@ def sim():
 
             if curr.is_correct():
                 curr.money += board[c][r]
+                in_control = participants.index(curr)
                 break
             else:
                 curr.money -= board[c][r]
                 participants.pop(buzz_index)
+                
+        board[c][r] = -1                
 
-        board[c][r] = -1
-    
-    #print(f"Player 1: {p1.money}\nPlayer 2: {p2.money}\nPlayer 3: {p3.money}")
+def sim():
+    p1 = Player(0.7, 0.9, 1, bet_function, bet_function, pick_q)
+    p2 = Player(0.7, 0.9, 1, bet_function, bet_function, pick_q)
+    p3 = Player(0.7, 0.9, 1, bet_function, bet_function, pick_q)
+
+    players = [p1, p2, p3]
+    in_control = 0
+
+    board = gen_board(False)
+    do_round(board, in_control, players) # Normal jeopardy
+
+    board = gen_board(True)
+    do_round(board, in_control, players) # Double jeopardy
+
     return p1.money, p2.money, p3.money
 
-p1Money, p2Money, p3Money = 0, 0, 0
+p1Money = 0
+p2Money = 0
+p3Money = 0
 
 n = 1000
 for i in range(n):
