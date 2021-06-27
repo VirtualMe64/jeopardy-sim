@@ -1,7 +1,7 @@
 from player import Player
+from question import Question
 from pprint import pprint
 import random
-from question import Question
 
 def gen_board(double_jeopardy):
     '''
@@ -44,12 +44,6 @@ def round_over(board):
     
     return True
 
-def bet_function_1(money):
-    return money
-
-def bet_function_2(money):
-    return money // 2
-
 def pick_q(board):
     for col in board:
         for q in col:
@@ -59,39 +53,48 @@ def pick_q(board):
 def do_round(board, in_control, players):
     while not round_over(board):
         question = players[in_control].pick_question_strat(board)
-        participants = []
-        for player in players:
-            if player.know_question():
-                participants.append(player)
+        participants = [player for player in players if player.know_question()]
         
-        while len(participants) > 0:
-            buzz_index = random.choices(range(len(participants)), [p.buzzer_skill for p in participants])[0]
-            curr = participants[buzz_index]
-            
-            if not question.daily_double:
-                if curr.is_correct():
-                    curr.money += question.value
-                    in_control = participants.index(curr)
-                    break
-                else:
-                    curr.money -= question.value
-                    participants.pop(buzz_index)
-            
-            else: # Daily Double
-                bet = curr.daily_double_strat(curr.money)
-                if curr.is_correct():
-                    curr.money += bet
-                else:
-                    curr.money -= bet
-                break
+        do_question(participants, question)
                 
         question.answered = True
     
+def do_question(participants, question):
+    while len(participants) > 0:
+        buzz_index = random.choices(range(len(participants)), [p.buzzer_skill for p in participants])[0]
+        curr = participants[buzz_index]
+        
+        if not question.daily_double:
+            if curr.is_correct():
+                curr.money += question.value
+                in_control = participants.index(curr)
+                break
+            else:
+                curr.money -= question.value
+                participants.pop(buzz_index)
+        
+        else: # Daily Double
+            bet = curr.daily_double_strat(curr.money)
+            if curr.is_correct():
+                curr.money += bet
+            else:
+                curr.money -= bet
+            break
+
+def do_final_jeopardy(players):
+    participants = [player for player in players if player.money > 0]
+
+    for participant in participants:
+        bet = participant.final_jeopardy_strat(participant.money)
+        if participant.is_correct():
+            participant.money += bet
+        else:
+            participant.money -= bet
 
 def sim():
-    p1 = Player(0.7, 0.9, 1, bet_function_1, bet_function_1, pick_q)
-    p2 = Player(0.7, 0.9, 1, bet_function_2, bet_function_1, pick_q)
-    p3 = Player(0.7, 0.9, 1, bet_function_2, bet_function_1, pick_q)
+    p1 = Player(0.7, 0.9, 1, lambda x : x, lambda x : x, pick_q)
+    p2 = Player(0.7, 0.9, 1, lambda x : x / 2, lambda x : x / 2, pick_q)
+    p3 = Player(0.7, 0.9, 1, lambda x : x / 3, lambda x : x / 3, pick_q)
 
     players = [p1, p2, p3]
     in_control = 0
@@ -101,6 +104,8 @@ def sim():
 
     board = gen_board(True)
     do_round(board, in_control, players) # Double jeopardy
+
+    do_final_jeopardy(players)
 
     return p1.money, p2.money, p3.money
 
